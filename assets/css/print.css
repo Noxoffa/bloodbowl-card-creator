@@ -1,0 +1,227 @@
+.star-list {
+    max-height: 24rem;
+    overflow-y: auto;
+    border: 1px solid var(--bs-border-color);
+    border-radius: var(--bs-border-radius);
+}
+
+.star-list-item,
+.queued-card-item {
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr) 5rem auto;
+    gap: 0.75rem;
+    align-items: center;
+    padding: 0.55rem 0.75rem;
+    border-bottom: 1px solid var(--bs-border-color);
+}
+
+.star-list-item:last-child,
+.queued-card-item:last-child {
+    border-bottom: 0;
+}
+
+.star-list-item[hidden] {
+    display: none;
+}
+
+.star-name {
+    min-width: 0;
+}
+
+.star-list-item label,
+.queued-card-item label {
+    margin: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.star-edited-badge {
+    margin-left: 0.4rem;
+    vertical-align: text-bottom;
+}
+
+.star-actions {
+    display: flex;
+    gap: 0.35rem;
+}
+
+.star-quantity {
+    min-width: 0;
+}
+
+.print-preview {
+    display: grid;
+    gap: 1.5rem;
+    justify-items: center;
+}
+
+.print-empty-state {
+    width: 100%;
+    padding: 4rem 1rem;
+    text-align: center;
+    color: var(--bs-secondary-color);
+    border: 2px dashed var(--bs-border-color);
+    border-radius: var(--bs-border-radius-lg);
+}
+
+.print-page-wrapper {
+    width: min(100%, 210mm);
+}
+
+.print-page-label {
+    margin-bottom: 0.35rem;
+    font-size: 0.875rem;
+    color: var(--bs-secondary-color);
+}
+
+.print-page {
+    position: relative;
+    width: 210mm;
+    height: 297mm;
+    overflow: hidden;
+    background: #fff;
+    box-shadow: 0 0.25rem 1rem rgb(0 0 0 / 18%);
+    transform-origin: top left;
+}
+
+.print-card {
+    position: absolute;
+}
+
+.print-card img {
+    display: block;
+    width: 100%;
+    height: 100%;
+}
+
+.page-cut-mark {
+    position: absolute;
+    z-index: 20;
+    display: block;
+    background: #000;
+    pointer-events: none;
+}
+
+.page-cut-mark-vertical {
+    width: 0.2mm;
+    height: 5mm;
+    transform: translateX(-0.1mm);
+}
+
+.page-cut-mark-horizontal {
+    width: 5mm;
+    height: 0.2mm;
+    transform: translateY(-0.1mm);
+}
+
+.page-cut-mark-top {
+    top: 2mm;
+}
+
+.page-cut-mark-bottom {
+    bottom: 2mm;
+}
+
+.page-cut-mark-left {
+    left: 2mm;
+}
+
+.page-cut-mark-right {
+    right: 2mm;
+}
+
+.card-renderer-frame {
+    position: fixed;
+    top: 0;
+    left: -10000px;
+    width: 900px;
+    height: 1250px;
+    opacity: 0;
+    pointer-events: none;
+}
+
+.card-editor-frame {
+    width: 100%;
+    height: calc(100vh - 7.5rem);
+    border: 0;
+}
+
+.card-editor-loading {
+    position: absolute;
+    inset: 0;
+    z-index: 2;
+    display: grid;
+    place-items: center;
+    color: var(--bs-secondary-color);
+    background: var(--bs-body-bg);
+}
+
+.card-editor-loading.is-ready {
+    display: none;
+}
+
+@media (max-width: 1199.98px) {
+    .print-page-wrapper {
+        overflow: auto;
+    }
+}
+
+@page {
+    size: A4 portrait;
+    margin: 0;
+}
+
+@media print {
+    html,
+    body {
+        margin: 0 !important;
+        padding: 0 !important;
+        background: #fff !important;
+    }
+
+    body > :not(.print-workspace) {
+        display: none !important;
+    }
+
+    .print-workspace {
+        display: block !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        max-width: none !important;
+    }
+
+    .print-workspace > .row,
+    .print-workspace > .row > section:last-child,
+    .print-preview,
+    .print-page-wrapper {
+        display: block !important;
+        width: auto !important;
+        margin: 0 !important;
+        padding: 0 !important;
+    }
+
+    .print-controls,
+    #previewTitle,
+    #pageSummary,
+    .print-page-label,
+    #printEmptyState {
+        display: none !important;
+    }
+
+    .print-page {
+        width: 210mm !important;
+        height: 297mm !important;
+        margin: 0 !important;
+        box-shadow: none !important;
+        break-after: page;
+        page-break-after: always;
+        print-color-adjust: exact;
+        -webkit-print-color-adjust: exact;
+    }
+
+    .print-page-wrapper:last-child .print-page {
+        break-after: auto;
+        page-break-after: auto;
+    }
+}

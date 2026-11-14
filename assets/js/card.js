@@ -236,16 +236,79 @@ drawGoldPrice = function (value, x, y){
 }
 
 drawDevelopment = function (primary, secondary) {
-    getContext().font = 'bold 24px franklin-gothic-book';
-    getContext().fillStyle = 'black';
-    getContext().textAlign = "left";
-    getContext().textBaseline = "middle";
-    x = 261;
-    writeScaled(i18next.t('card.caracteristics.primary')+":", { x: x, y: 890 });
-    writeScaled(i18next.t('card.caracteristics.secondary')+":", { x: x, y: 930 });
-    getContext().font = '24px franklin-gothic-book';
-    writeScaled(primary, { x: x+92, y: 890 });
-    writeScaled(secondary, { x: x+121, y: 930 });
+    const context = getContext();
+    const x = 261;
+    const maxWidth = 500;
+    const gap = 8;
+    const fontSize = 24;
+    const lineHeight = 28;
+    const blockGap = 12;
+    const lines = [
+        {
+            label: i18next.t('card.caracteristics.primary') + ":",
+            value: primary
+        },
+        {
+            label: i18next.t('card.caracteristics.secondary') + ":",
+            value: secondary
+        }
+    ];
+
+    context.fillStyle = 'black';
+    context.textAlign = "left";
+    context.textBaseline = "middle";
+
+    context.font = `bold ${fontSize}px franklin-gothic-book`;
+    const labelWidth = Math.max(...lines.map(function (line) {
+        return context.measureText(line.label).width;
+    }));
+    const valueX = x + labelWidth + gap;
+    const valueWidth = maxWidth - labelWidth - gap;
+
+    const wrapDevelopmentValue = function (value) {
+        const categories = value.split(",").map(function (category) {
+            return category.trim();
+        }).filter(Boolean);
+        const wrappedLines = [];
+        let currentLine = "";
+
+        context.font = `${fontSize}px franklin-gothic-book`;
+        categories.forEach(function (category, index) {
+            const suffix = index < categories.length - 1 ? "," : "";
+            const nextCategory = category + suffix;
+            const candidate = currentLine ? currentLine + " " + nextCategory : nextCategory;
+
+            if (currentLine && context.measureText(candidate).width > valueWidth) {
+                wrappedLines.push(currentLine);
+                currentLine = nextCategory;
+            } else {
+                currentLine = candidate;
+            }
+        });
+
+        if (currentLine) {
+            wrappedLines.push(currentLine);
+        }
+
+        return wrappedLines.length ? wrappedLines : [""];
+    };
+
+    let y = 890;
+    lines.forEach(function (line, lineIndex) {
+        const wrappedValue = wrapDevelopmentValue(line.value);
+        context.font = `bold ${fontSize}px franklin-gothic-book`;
+        writeScaled(line.label, { x, y });
+
+        wrappedValue.forEach(function (valueLine, valueIndex) {
+            context.font = `${fontSize}px franklin-gothic-book`;
+            writeScaled(valueLine, { x: valueX, y: y + valueIndex * lineHeight });
+        });
+
+        y += wrappedValue.length * lineHeight;
+        if (lineIndex < lines.length - 1) {
+            y += blockGap;
+        }
+    });
 }
 
 async function drawCardFrame(cardData) {
@@ -521,3 +584,116 @@ async function writeControls(cardData) {
     // render the updated info
     render(cardData);
 }
+
+
+const playerPresetProfiles = new Map();
+
+function playerPresetLanguage() {
+    return window.i18next && String(i18next.resolvedLanguage || i18next.language).startsWith("fr")
+        ? "fr"
+        : "en";
+}
+
+function playerPresetText(value) {
+    if (!value) return "";
+    return value[playerPresetLanguage()] || value.en || value.fr || "";
+}
+
+function setPlayerSkillAccess(cardData, prefix, codes) {
+    const categories = {
+        A: "agility",
+        D: "devious",
+        G: "general",
+        M: "mutations",
+        P: "passing",
+        S: "strength"
+    };
+
+    Object.values(categories).forEach(category => {
+        cardData[prefix + "_" + category] = false;
+    });
+    (codes || []).forEach(code => {
+        const category = categories[code];
+        if (category) cardData[prefix + "_" + category] = true;
+    });
+}
+
+async function waitForPlayerPresetI18n() {
+    if (window.i18next && i18next.isInitialized) return;
+    await new Promise(resolve => {
+        if (!window.i18next) {
+            resolve();
+            return;
+        }
+        i18next.on("initialized", resolve);
+    });
+}
+
+async function loadPlayerPresetIndex() {
+    await waitForPlayerPresetI18n();
+
+    const response = await fetch("assets/player-presets.json?v=20261114-1");
+    if (!response.ok) {
+        throw new Error("Unable to load player presets (" + response.status + ")");
+    }
+
+    const data = await response.json();
+    const select = document.getElementById("playerPreset");
+    if (!select) return;
+
+    playerPresetProfiles.clear();
+    select.replaceChildren();
+
+    data.teams.forEach(team => {
+        const group = document.createElement("optgroup");
+        group.label = playerPresetText(team.name);
+
+        team.positions.forEach(position => {
+            const profile = { team, position };
+            playerPresetProfiles.set(position.id, profile);
+            group.append(new Option(playerPresetText(position.name), position.id));
+        });
+
+        select.append(group);
+    });
+
+    const first = select.querySelector("option");
+    select.value = first ? first.value : "";
+    window.BloodBowlPresetCombobox?.refresh(select);
+}
+
+async function loadPlayerPresetForEditing(id) {
+    const profile = playerPresetProfiles.get(id);
+    if (!profile) return null;
+
+    const cardData = defaultCardData();
+    const position = profile.position;
+    const cost = String(position.cost || 0).replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+
+    cardData.cardName = playerPresetText(position.name);
+    cardData.teamName = playerPresetText(profile.team.name);
+    cardData.showTeamName = true;
+    cardData.footer = cost;
+    cardData.ma = position.stats.ma;
+    cardData.st = position.stats.st;
+    cardData.ag = position.stats.ag;
+    cardData.pa = position.stats.pa;
+    cardData.av = position.stats.av;
+    cardData.cardText = (position.skills || []).map(playerPresetText).join(", ");
+    cardData.keywords = (position.roles || []).map(playerPresetText).join(", ");
+
+    setPlayerSkillAccess(cardData, "p", position.primary);
+    setPlayerSkillAccess(cardData, "s", position.secondary);
+
+    document.getElementById("removeBorder").checked = false;
+    document.getElementById("dashLine").checked = false;
+    await writeControls(cardData);
+    return { cardName: cardData.cardName };
+}
+
+document.addEventListener("DOMContentLoaded", () => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("embedded") !== "1") {
+        loadPlayerPresetIndex().catch(console.error);
+    }
+});

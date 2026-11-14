@@ -8,16 +8,22 @@
     <label class="form-check-label" for="dashLine" data-i18n="card.action.add_dash">Add dash line border</label>
 </div>
 
-<div class="mt-4">
-    <button  type="button" class="btn btn-primary" id="saveCanvasButton" onclick="saveCardAsImage()">
-        <span data-i18n="card.action.save_as_image"/>
-    </button>
-</div>
-
-<div class="mt-4">
-    <button type="button" class="btn btn-primary" id="saveButton" onclick="onSaveClicked()">
-        <span data-i18n="card.action.save_as_file"/>
-    </button>
+<div class="row g-2 mt-4">
+    <div class="col-12 col-sm-4 d-grid">
+        <button type="button" class="btn btn-sm btn-primary h-100" id="saveCanvasButton" onclick="saveCardAsImage()">
+            <span data-i18n="card.action.save_as_image"/>
+        </button>
+    </div>
+    <div class="col-12 col-sm-4 d-grid">
+        <button type="button" class="btn btn-sm btn-success h-100" onclick="sendCurrentCardToPrint('star', this)">
+            <span data-i18n="card.action.send_to_print">Send to print</span>
+        </button>
+    </div>
+    <div class="col-12 col-sm-4 d-grid">
+        <button type="button" class="btn btn-sm btn-primary h-100" id="saveButton" onclick="onSaveClicked()">
+            <span data-i18n="card.action.save_as_file"/>
+        </button>
+    </div>
 </div>
 
 <div class="mt-4">
@@ -26,8 +32,12 @@
 </div>
 
 <div class="form-group mt-3">
-    <label for="preset" data-i18n="card.action.choose_preset">Choose preset</label>
-    <select class="form-select" id="preset" name="preset" oninput="">
+    <label for="presetCombobox" data-i18n="card.action.choose_preset">Choose preset</label>
+    <select class="form-select" id="preset" name="preset"
+        data-searchable-preset
+        data-preset-placeholder-key="card.action.preset_search_placeholder"
+        data-preset-placeholder="Type to filter presets…"
+        data-load-button="loadPreset">
         <option value="Akhorne_The_Squirrel.json">Akhorne The Squirrel</option>
         <option value="Anqi_Panqi.json">Anqi Panqi</option>
         <option value="Barik_Farblast.json">Barik Farblast</option>
@@ -95,10 +105,13 @@
         <option value="Zolcath_the_Zoat.json">Zolcath the Zoat</option>
         <option value="Zzharg_Madeye.json">Zzharg Madeye</option>
     </select>
+    <p class="form-text text-body-secondary small mb-0" data-i18n="card.action.preset_notice">
+        These presets reproduce data from official publications. They are intended for users who own the corresponding books and do not replace the official rules.
+    </p>
 </div>
 
 <div class="mt-4">
-    <button type="button" class="btn btn-primary" id="loadPreset" data-i18n="card.action.load_preset" onclick="loadPreset(preset.value)">
+    <button type="button" class="btn btn-primary" id="loadPreset" data-i18n="card.action.load_preset" onclick="loadStarPresetForEditing(preset.value)">
         Load preset
     </button>
 </div>

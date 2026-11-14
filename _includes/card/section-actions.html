@@ -8,21 +8,51 @@
     <label class="form-check-label" for="dashLine" data-i18n="card.action.add_dash">Add dash line border</label>
 </div>
 
-<div class="mt-4">
-    <button  type="button" class="btn btn-primary" id="saveCanvasButton" onclick="saveCardAsImage()">
-        <span data-i18n="card.action.save_as_image"/>
-    </button>
-</div>
-
-<div class="mt-4">
-    <button type="button" class="btn btn-primary" id="saveButton" onclick="onSaveClicked()">
-        <span data-i18n="card.action.save_as_file"/>
-    </button>
+<div class="row g-2 mt-4">
+    <div class="col-12 col-sm-4 d-grid">
+        <button type="button" class="btn btn-sm btn-primary h-100" id="saveCanvasButton" onclick="saveCardAsImage()">
+            <span data-i18n="card.action.save_as_image"/>
+        </button>
+    </div>
+    <div class="col-12 col-sm-4 d-grid">
+        <button type="button" class="btn btn-sm btn-success h-100" onclick="sendCurrentCardToPrint('player', this)">
+            <span data-i18n="card.action.send_to_print">Send to print</span>
+        </button>
+    </div>
+    <div class="col-12 col-sm-4 d-grid">
+        <button type="button" class="btn btn-sm btn-primary h-100" id="saveButton" onclick="onSaveClicked()">
+            <span data-i18n="card.action.save_as_file"/>
+        </button>
+    </div>
 </div>
 
 <div class="mt-4">
     <label for="loadbutton" data-i18n="card.action.load"></label>
     <input class="form-control" id="loadbutton" oninput="fileChange(this.files[0])" type="file">
+</div>
+
+<div class="form-group mt-3">
+    <label for="playerPresetCombobox" data-i18n="card.action.choose_preset">Choose preset</label>
+    <select class="form-select" id="playerPreset"
+        data-searchable-preset
+        data-preset-placeholder-key="card.action.preset_search_placeholder"
+        data-preset-placeholder="Type a team or player position…"
+        data-load-button="loadPlayerPreset">
+    </select>
+    <p class="form-text text-body-secondary small mb-0" data-i18n="card.action.player_preset_source">
+        Third Season profiles grouped by team, cross-checked with BBTC and translated from the verified NRData mapping.
+    </p>
+    <p class="form-text text-body-secondary small mb-0" data-i18n="card.action.preset_notice">
+        These presets reproduce data from official publications. They are intended for users who own the corresponding books and do not replace the official rules.
+    </p>
+</div>
+
+<div class="mt-3">
+    <button type="button" class="btn btn-primary" id="loadPlayerPreset"
+        data-i18n="card.action.load_preset"
+        onclick="loadPlayerPresetForEditing(playerPreset.value)">
+        Load preset
+    </button>
 </div>
 
 <div class="mt-4">

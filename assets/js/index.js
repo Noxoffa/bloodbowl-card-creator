@@ -1,5 +1,26 @@
+function waitForImageElement(image) {
+    if (image.complete && image.naturalWidth > 0) {
+        return Promise.resolve(image);
+    }
+    return new Promise((resolve, reject) => {
+        image.addEventListener("load", () => resolve(image), { once: true });
+        image.addEventListener("error", reject, { once: true });
+    });
+}
+
+function loadCanvasImage(src) {
+    return new Promise((resolve, reject) => {
+        const image = new Image();
+        image.onload = () => resolve(image);
+        image.onerror = reject;
+        image.src = src;
+    });
+}
+
+
 onAnyChange = function () {
     var cardData = readControls();
+    cardData = window.BloodBowlQueueEditor?.augmentData(cardData) || cardData;
     render(cardData);
     saveLatestCardData(dataRef);
 }
@@ -57,7 +78,7 @@ saveLatestCardData = function(dataRef) {
     if (!cardData.name) {
         return;
     }
-    saveCardDataMap(dataRef, cardData);
+    if (!window.BloodBowlQueueEditor?.saveDraft(cardData)) saveCardDataMap(dataRef, cardData);
 }
 
 loadCardData = function(dataRef) {
@@ -454,7 +475,8 @@ readJSONFile = async function (file) {
 async function loadPreset(url) {
     const response = await fetch("assets/star/" + url);
     const json = await response.json();
-    writeControls(json);
+    await writeControls(json);
+    return json;
 }
 
 async function fileChange(file) {
@@ -515,3 +537,4 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     });
 });
+

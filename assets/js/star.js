@@ -292,11 +292,9 @@ async function drawCardFrame(cardData) {
 
     drawCardBodyTitle(skills_traits.toUpperCase(), 513);
     drawCardBodyTitle(plays_for.toUpperCase(), 650);
-    playsFor = document.getElementById("playsFor").value;
-    drawCardText(playsFor, 680, 2, false, false);
+    drawCardText(cardData.playsFor, 680, 2, false, false);
     drawCardBodyTitle(special_rules.toUpperCase(), 750);
-    specialRules = document.getElementById("specialRules").value;
-    drawCardText(specialRules, 780, 8, false, true);
+    drawCardText(cardData.specialRules, 780, 8, false, true);
 
     drawKeywords(cardData.keywords);
 
@@ -345,24 +343,47 @@ function drawNumber(num,x, y, plus){
     }
 }
 
-render = function (cardData) {
-    // First the textured background
-    getContext().drawImage(document.getElementById(cardData.backgroundType), 0, 0, getCanvas().width, getCanvas().height);
+function waitForImageElement(image) {
+    if (image.complete && image.naturalWidth > 0) {
+        return Promise.resolve(image);
+    }
+    return new Promise((resolve, reject) => {
+        image.addEventListener("load", () => resolve(image), { once: true });
+        image.addEventListener("error", reject, { once: true });
+    });
+}
+
+function loadCanvasImage(src) {
+    return new Promise((resolve, reject) => {
+        const image = new Image();
+        image.onload = () => resolve(image);
+        image.onerror = reject;
+        image.src = src;
+    });
+}
+
+render = async function (cardData) {
+    await document.fonts.ready;
+    await pageReady();
+
+    const canvas = getCanvas();
+    const context = getContext();
+    const background = document.getElementById(cardData.backgroundType);
+    await waitForImageElement(background);
+
+    context.clearRect(0, 0, canvas.width, canvas.height);
+    context.drawImage(background, 0, 0, canvas.width, canvas.height);
 
     if (cardData.imageUrl) {
-        var image = new Image();
-        image.onload = function () {
-            var position = scalePixelPosition({ x: 100 + cardData.imageProperties.offsetX, y: cardData.imageProperties.offsetY });
-            var scale = cardData.imageProperties.scalePercent / 100.0;
-            var width = image.width * scale;
-            var height = image.height * scale;
-            getContext().drawImage(image, position.x, position.y, width, height);
-            drawCardFrame(cardData);
-        };
-        image.src = cardData.imageUrl;
+        const image = await loadCanvasImage(cardData.imageUrl);
+        const position = scalePixelPosition({ x: 100 + cardData.imageProperties.offsetX, y: cardData.imageProperties.offsetY });
+        const scale = cardData.imageProperties.scalePercent / 100.0;
+        const width = image.width * scale;
+        const height = image.height * scale;
+        context.drawImage(image, position.x, position.y, width, height);
     }
-    // next the frame elements
-    drawCardFrame(cardData);
+
+    await drawCardFrame(cardData);
 }
 
 function readControls() {
@@ -429,5 +450,125 @@ async function writeControls(cardData) {
     document.getElementById("keywords").value = cardData.keywords;
 
     // render the updated info
-    render(cardData);
+    await render(cardData);
+    return cardData;
 }
+
+function waitForI18n() {
+    if (window.i18next && i18next.isInitialized) {
+        return Promise.resolve();
+    }
+    return new Promise(resolve => {
+        const interval = window.setInterval(() => {
+            if (window.i18next && i18next.isInitialized) {
+                window.clearInterval(interval);
+                resolve();
+            }
+        }, 25);
+    });
+}
+
+function starCanvasToBlob() {
+    return new Promise((resolve, reject) => {
+        getCanvas().toBlob(blob => {
+            if (blob) resolve(blob);
+            else reject(new Error("Unable to render card image"));
+        }, "image/png");
+    });
+}
+
+async function renderStarDataForPrint(cardData, options = {}) {
+    await waitForI18n();
+
+    document.getElementById("removeBorder").checked = Boolean(options.removeBorder);
+    document.getElementById("dashLine").checked = Boolean(options.dashLine);
+
+    // writeControls converts the embedded base64 portrait to a temporary URL,
+    // so work on a copy and leave the preset object untouched.
+    const printableData = JSON.parse(JSON.stringify(cardData));
+    await writeControls(printableData);
+    const blob = await starCanvasToBlob();
+
+    if (printableData.imageUrl && printableData.imageUrl.startsWith("blob:")) {
+        URL.revokeObjectURL(printableData.imageUrl);
+    }
+
+    return {
+        cardName: printableData.cardName,
+        blob
+    };
+}
+
+async function fetchStarPreset(file) {
+    const response = await fetch("assets/star/" + file);
+    if (!response.ok) {
+        throw new Error(`Unable to load ${file} (${response.status})`);
+    }
+    const cardData = await response.json();
+    if (!window.BloodBowlStarLocales) return cardData;
+    return BloodBowlStarLocales.localizeCardData(cardData, file);
+}
+
+async function renderStarPresetForPrint(file, options = {}) {
+    const cardData = await fetchStarPreset(file);
+    return renderStarDataForPrint(cardData, options);
+}
+
+async function loadStarPresetForEditing(file) {
+    await waitForI18n();
+    const cardData = await fetchStarPreset(file);
+    document.getElementById("removeBorder").checked = false;
+    document.getElementById("dashLine").checked = false;
+    await writeControls(cardData);
+    return { cardName: cardData.cardName };
+}
+
+async function loadStarDataForEditing(cardData) {
+    await waitForI18n();
+    const editableData = JSON.parse(JSON.stringify(cardData));
+    document.getElementById("removeBorder").checked = Boolean(editableData.printOptions && editableData.printOptions.removeBorder);
+    document.getElementById("dashLine").checked = Boolean(editableData.printOptions && editableData.printOptions.dashLine);
+    await writeControls(editableData);
+    return { cardName: editableData.cardName };
+}
+
+async function exportCurrentStarData() {
+    await waitForI18n();
+    const cardData = readControls();
+    cardData.base64Image = await handleImageUrlFromDisk(cardData.imageUrl);
+    cardData.imageUrl = null;
+    cardData.printOptions = {
+        removeBorder: document.getElementById("removeBorder").checked,
+        dashLine: document.getElementById("dashLine").checked
+    };
+    return cardData;
+}
+
+window.BloodBowlStarRenderer = Object.freeze({
+    exportCurrentData: exportCurrentStarData,
+    loadData: loadStarDataForEditing,
+    loadPreset: loadStarPresetForEditing,
+    renderData: renderStarDataForPrint,
+    renderPreset: renderStarPresetForPrint
+});
+
+document.addEventListener("DOMContentLoaded", () => {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get("embedded") === "1") {
+        document.querySelector("nav")?.classList.add("d-none");
+    }
+
+    waitForI18n().then(async () => {
+        const select = document.getElementById("preset");
+        if (!select) return;
+
+        let presets = [...select.options].map(option => ({ file: option.value, name: option.textContent }));
+        if (window.BloodBowlStarLocales) {
+            presets = await BloodBowlStarLocales.localizePresetList(presets);
+        }
+        presets.forEach((preset, index) => {
+            select.options[index].textContent = preset.name;
+        });
+        window.BloodBowlPresetCombobox?.refresh(select);
+    }).catch(console.error);
+});
